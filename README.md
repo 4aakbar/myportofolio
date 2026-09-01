@@ -1,5 +1,5 @@
-Nama : Andy Aulia Akbar
+Nama : ANDY AULIA AKBAR
 
 NPM : 2506613590
 
-Kelas : PBP c
+Kelas : PBP C
