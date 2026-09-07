@@ -147,6 +147,93 @@ h1, .brand {
     position: relative;
 }
 
+.skills-section {
+    padding: 4rem 0 5rem;
+    border-top: 1px solid var(--line);
+}
+
+.section-heading {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    grid-template-areas:
+        "kicker title"
+        "intro intro";
+    align-items: end;
+    gap: 0.75rem 2rem;
+    margin-bottom: 2rem;
+}
+
+.section-kicker {
+    grid-area: kicker;
+    color: var(--accent-dark);
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.section-heading h2 {
+    grid-area: title;
+    font-family: "Space Grotesk", -apple-system, sans-serif;
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    line-height: 1;
+}
+
+.section-intro {
+    grid-area: intro;
+    color: var(--text-muted);
+    max-width: 520px;
+}
+
+.skills-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 1rem;
+}
+
+.skill-item {
+    grid-column: span 2;
+    min-height: 220px;
+    padding: 1.5rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background-color: rgba(255, 255, 255, 0.35);
+    transition: transform 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.skill-item:nth-child(4),
+.skill-item:nth-child(5) {
+    grid-column: span 3;
+}
+
+.skill-item:hover {
+    transform: translateY(-5px);
+    border-color: var(--accent);
+    background-color: #fffaf4;
+}
+
+.skill-number {
+    display: block;
+    color: var(--accent-dark);
+    font-family: "Space Grotesk", -apple-system, sans-serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    margin-bottom: 2.5rem;
+}
+
+.skill-item h3 {
+    font-family: "Space Grotesk", -apple-system, sans-serif;
+    font-size: 1.15rem;
+    line-height: 1.2;
+    margin-bottom: 0.75rem;
+}
+
+.skill-item p {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    line-height: 1.55;
+}
+
 .photo-block {
     position: absolute;
     top: 1.25rem;
@@ -177,6 +264,10 @@ h1, .brand {
 }
 
 @media (max-width: 600px) {
+    .site-header nav {
+        gap: 1rem;
+    }
+
     .hero-grid {
         grid-template-columns: 1fr;
         grid-template-areas:
@@ -191,6 +282,33 @@ h1, .brand {
 
     .social-links {
         justify-content: flex-start;
+    }
+
+    .skills-section {
+        padding: 3rem 0 4rem;
+    }
+
+    .section-heading {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+            "kicker"
+            "title"
+            "intro";
+    }
+
+    .skills-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .skill-item,
+    .skill-item:nth-child(4),
+    .skill-item:nth-child(5) {
+        grid-column: auto;
+        min-height: 0;
+    }
+
+    .skill-number {
+        margin-bottom: 1.5rem;
     }
 }
 
