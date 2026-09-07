@@ -15,3 +15,6 @@ Kelas : PBP C
 ### AI Disclosure Tugas 1
 
 Dalam pengerjaan Tugas 1, saya menggunakan AI sebagai alat bantu untuk memahami dan mengevaluasi implementasi HTML dan CSS. AI digunakan terutama untuk memberikan saran mengenai struktur HTML semantik, responsive layout, perbaikan CSS, serta saran untuk layout dan tema. Saya tetap melakukan implementasi dan penyesuaian kode secara mandiri, termasuk menyesuaikan desain dengan kebutuhan website portofolio dan menguji hasilnya melalui browser serta `python manage.py runserver`. Saya juga mengevaluasi kembali saran yang diberikan AI dan melakukan perubahan secara manual ketika hasilnya tidak sesuai dengan desain yang saya inginkan.
+
+
+
