@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Experience - {{ name }}</title>
+    <title>Projects - {{ name }}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
@@ -23,30 +23,28 @@
     </header>
 
     <main>
-        <section class="showcase-section experience-section" id="experience">
+        <section class="showcase-section projects-section" id="projects">
             <div class="container">
                 <div class="section-heading">
-                    <p class="section-kicker">Perjalanan saya sejauh ini</p>
-                    <h1>Experience</h1>
+                    <p class="section-kicker">Yang pernah saya bangun</p>
+                    <h1>Projects</h1>
                 </div>
 
                 <div class="showcase-grid">
-                    {% for experience in experience_list %}
+                    {% for project in project_list %}
                         <article class="showcase-card">
                             <div class="showcase-card-top">
-                                <span class="showcase-tag">{{ experience.get_category_display }}</span>
-                                {% if experience.is_ongoing %}
-                                    <span class="status-pill status-ongoing">Sedang berlangsung</span>
-                                {% else %}
-                                    <span class="status-pill status-done">Selesai</span>
-                                {% endif %}
+                                <span class="showcase-tag">{{ project.get_category_display }}</span>
                             </div>
-                            <h2>{{ experience.title }}</h2>
-                            <p class="showcase-description">{{ experience.description }}</p>
+                            <h2>{{ project.title }}</h2>
+                            <p class="showcase-description">{{ project.description }}</p>
+                            {% if project.link %}
+                                <a href="{{ project.link }}" class="showcase-link" target="_blank" rel="noopener">View Project &rarr;</a>
+                            {% endif %}
                         </article>
                     {% empty %}
                         <p class="empty-state">
-                            Belum ada pengalaman yang ditambahkan.
+                            Belum ada proyek yang ditambahkan.
                         </p>
                     {% endfor %}
                 </div>
