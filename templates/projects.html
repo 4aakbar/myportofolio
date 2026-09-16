@@ -8,13 +8,28 @@
     <main>
         <section class="showcase-section projects-section" id="projects">
             <div class="container">
-                <div class="section-heading">
-                    <p class="section-kicker">Yang pernah saya bangun</p>
+                <p class="section-kicker">Yang pernah saya bangun</p>
+                <div class="project-header">
                     <h1>Projects</h1>
-                    <a href="{% url 'main:create_project' %}" class="button">Tambah Project</a>
+                    <a href="{% url 'main:create_project' %}" class="button project-add-button">
+                        <span aria-hidden="true">+</span>
+                        Tambah Proyek
+                    </a>
                 </div>
 
-                <div class="showcase-grid">
+                <form method="get"
+                      action="{% url 'main:show_projects' %}"
+                      class="project-search">
+                    <input type="search"
+                           name="title"
+                           value="{{ title_query }}"
+                           placeholder="Cari berdasarkan nama proyek"
+                           class="project-search__input"
+                           aria-label="Cari berdasarkan nama proyek">
+                    <button type="submit" class="button">Cari</button>
+                </form>
+
+                <div class="showcase-grid project-grid">
                     {% for project in project_list %}
                         <article class="showcase-card">
                             <div class="showcase-card-top">
@@ -22,14 +37,21 @@
                             </div>
                             <h2>{{ project.title }}</h2>
                             <p class="showcase-description">{{ project.description }}</p>
-                            {% if project.link %}
-                                <a href="{{ project.link }}" class="showcase-link" target="_blank" rel="noopener">View Project &rarr;</a>
-                            {% endif %}
+                            <div class="project-card-actions">
+                                <div class="project-actions">
+                                    {% if project.link %}
+                                        <a href="{{ project.link }}" class="button" target="_blank" rel="noopener">Lihat Project</a>
+                                    {% endif %}
+                                    {% include "components/project_delete_modal.html" with project=project %}
+                                </div>
+                            </div>
                         </article>
                     {% empty %}
-                        <p class="empty-state">
-                            Belum ada proyek yang ditambahkan.
-                        </p>
+                        {% if title_query %}
+                            <p class="empty-state">Tidak ada proyek dengan nama tersebut.</p>
+                        {% else %}
+                            <p class="empty-state">Belum ada proyek yang ditambahkan.</p>
+                        {% endif %}
                     {% endfor %}
                 </div>
             </div>
