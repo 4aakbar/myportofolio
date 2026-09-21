@@ -56,7 +56,7 @@ def show_projects(request):
     return render(request, "projects.html", context)
 
 ####################################################################
-#   projects crud (no updates yet)   
+#   projects crud
 
 def get_projects_json(request):
     title_query = request.GET.get("title", "").strip()
@@ -79,6 +79,23 @@ def create_project(request):
     context = {
         "name": "Andy Aulia Akbar",
         "form": form,
+    }
+    return render(request, "projects_form.html", context)
+
+
+def update_project(request, project_id):
+    project = get_object_or_404(Project, pk=project_id)
+    form = ProjectForm(request.POST or None, instance=project)
+
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Proyek berhasil diperbarui!")
+        return redirect("main:show_projects")
+
+    context = {
+        "name": "Andy Aulia Akbar",
+        "form": form,
+        "project": project,
     }
     return render(request, "projects_form.html", context)
 

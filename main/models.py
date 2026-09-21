@@ -1,5 +1,6 @@
 import uuid
 from django.db import models
+from django.utils import timezone
 
 class Experience(models.Model):
     EXPERIENCE_CHOICES = [
@@ -16,7 +17,7 @@ class Experience(models.Model):
     description = models.TextField()
     category = models.CharField(max_length=20, choices=EXPERIENCE_CHOICES, default='full-time')
     thumbnail = models.URLField(blank=True, null=True)
-    started_at = models.DateTimeField(auto_now_add=True)
+    started_at = models.DateTimeField(default=timezone.now)
     ended_at = models.DateTimeField(blank=True, null=True)
     
     def __str__(self):

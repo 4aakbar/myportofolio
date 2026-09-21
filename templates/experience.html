@@ -17,6 +17,18 @@
                     </a>
                 </div>
 
+                <form method="get"
+                      action="{% url 'main:show_experience' %}"
+                      class="project-search">
+                    <input type="search"
+                           name="title"
+                           value="{{ title_query }}"
+                           placeholder="Cari berdasarkan nama pengalaman"
+                           class="project-search__input"
+                           aria-label="Cari berdasarkan nama pengalaman">
+                    <button type="submit" class="button">Cari</button>
+                </form>
+
                 <div class="showcase-grid">
                     {% for experience in experience_list %}
                         <article class="showcase-card">
@@ -29,6 +41,11 @@
                                 {% endif %}
                             </div>
                             <h2>{{ experience.title }}</h2>
+                            {% if not experience.is_ongoing %}
+                                <p class="showcase-daterange">
+                                    {{ experience.started_at|date:"M Y" }} - {{ experience.ended_at|date:"M Y" }}
+                                </p>
+                            {% endif %}
                             <p class="showcase-description">{{ experience.description }}</p>
                             <div class="project-card-actions">
                                 <div class="project-actions">
@@ -38,9 +55,11 @@
                             </div>
                         </article>
                     {% empty %}
-                        <p class="empty-state">
-                            Belum ada pengalaman yang ditambahkan.
-                        </p>
+                        {% if title_query %}
+                            <p class="empty-state">Tidak ada pengalaman dengan nama tersebut.</p>
+                        {% else %}
+                            <p class="empty-state">Belum ada pengalaman yang ditambahkan.</p>
+                        {% endif %}
                     {% endfor %}
                 </div>
             </div>

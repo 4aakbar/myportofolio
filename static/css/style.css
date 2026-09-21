@@ -503,6 +503,14 @@ h3,
     line-height: 1.6;
 }
 
+.showcase-daterange {
+    margin: 0 0 0.5rem;
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+}
+
 .showcase-link {
     align-self: flex-start;
     color: var(--ink);

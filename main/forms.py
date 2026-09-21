@@ -50,6 +50,7 @@ class ExperienceForm(ModelForm):
             "description",
             "category",
             "thumbnail",
+            "started_at",
             "ended_at",
         ]
 
@@ -58,6 +59,7 @@ class ExperienceForm(ModelForm):
             "description": "Deskripsi Experience",
             "category": "Kategori Experience",
             "thumbnail": "Thumbnail Experience",
+            "started_at": "Mulai pada Tanggal",
             "ended_at": "Berakhir pada Tanggal",
         }
 
@@ -80,5 +82,6 @@ class ExperienceForm(ModelForm):
                     "placeholder": "https://drive.google.com/thumbnail?id=...&sz=w1000",
                 }
             ),
+            "started_at": DateInput(attrs={"type": "date"}),
             "ended_at": DateInput(attrs={"type": "date"}),
         }

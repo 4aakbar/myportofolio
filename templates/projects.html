@@ -42,6 +42,7 @@
                                     {% if project.link %}
                                         <a href="{{ project.link }}" class="button" target="_blank" rel="noopener">Lihat Project</a>
                                     {% endif %}
+                                    <a href="{% url 'main:update_project' project.id %}" class="button">Edit</a>
                                     {% include "components/project_delete_modal.html" with project=project %}
                                 </div>
                             </div>
