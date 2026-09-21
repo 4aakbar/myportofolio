@@ -28,18 +28,6 @@ def show_experience(request):
     }
     return render(request, "experience.html", context)
 
-
-def get_projects_json(request):
-    title_query = request.GET.get("title", "").strip()
-    projects = Project.objects.all()
-
-    if title_query:
-        projects = projects.filter(title__icontains=title_query)
-
-    projects_json = serializers.serialize("json", projects)
-    return HttpResponse(projects_json, content_type="application/json")
-
-
 def show_projects(request):
     json_response = get_projects_json(request)
 
@@ -57,6 +45,18 @@ def show_projects(request):
     }
     return render(request, "projects.html", context)
 
+####################################################################
+#   projects crud (no updates yet)   
+
+def get_projects_json(request):
+    title_query = request.GET.get("title", "").strip()
+    projects = Project.objects.all()
+
+    if title_query:
+        projects = projects.filter(title__icontains=title_query)
+
+    projects_json = serializers.serialize("json", projects)
+    return HttpResponse(projects_json, content_type="application/json")
 
 def create_project(request):
     form = ProjectForm(request.POST or None)
@@ -82,3 +82,12 @@ def delete_project(request, project_id):
         return redirect("main:show_projects")
 
     return redirect("main:show_projects")
+
+####################################################################
+
+####################################################################
+# Experience Crud
+
+
+
+####################################################################
