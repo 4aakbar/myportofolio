@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block meta %}
+    <title>{% if experience %}Edit Experience{% else %}Add Experience{% endif %} - {{ name }}</title>
+{% endblock meta %}
+
+{% block content %}
+    <main>
+        <section class="showcase-section experience-section">
+            <div class="container">
+                <div class="section-heading">
+                    <h1>{% if experience %}Edit Pengalaman{% else %}Tambah Pengalaman{% endif %}</h1>
+                </div>
+                <form method="post"
+                      action="{% if experience %}{% url 'main:update_experience' experience.id %}{% else %}{% url 'main:create_experience' %}{% endif %}"
+                      class="project-form">
+                    {% csrf_token %}
+                    {% for field in form %}
+                        <div class="form-group">
+                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                            {% for error in field.errors %}
+                                <p class="form-error">{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                    {% endfor %}
+                    <button type="submit" class="button">
+                        {% if experience %}Simpan Perubahan{% else %}Tambah Pengalaman{% endif %}
+                    </button>
+                    <a href="{% url 'main:show_experience' %}" class="button button-secondary">Batal</a>
+                </form>
+            </div>
+        </section>
+    </main>
+{% endblock content %}

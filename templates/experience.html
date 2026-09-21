@@ -8,9 +8,13 @@
     <main>
         <section class="showcase-section experience-section" id="experience">
             <div class="container">
-                <div class="section-heading">
-                    <p class="section-kicker">Perjalanan saya sejauh ini</p>
+                <p class="section-kicker">Perjalanan saya sejauh ini</p>
+                <div class="project-header">
                     <h1>Experience</h1>
+                    <a href="{% url 'main:create_experience' %}" class="button project-add-button">
+                        <span aria-hidden="true">+</span>
+                        Tambah Pengalaman
+                    </a>
                 </div>
 
                 <div class="showcase-grid">
@@ -26,6 +30,12 @@
                             </div>
                             <h2>{{ experience.title }}</h2>
                             <p class="showcase-description">{{ experience.description }}</p>
+                            <div class="project-card-actions">
+                                <div class="project-actions">
+                                    <a href="{% url 'main:update_experience' experience.id %}" class="button">Edit</a>
+                                    {% include "components/experience_delete_modal.html" with experience=experience %}
+                                </div>
+                            </div>
                         </article>
                     {% empty %}
                         <p class="empty-state">
