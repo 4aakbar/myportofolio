@@ -11,6 +11,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 
 from main.forms import ExperienceForm, ProjectForm
 from main.models import Experience, Project
+from main.permissions import can_create_or_delete, can_update
 
 
 def show_main(request):
@@ -116,10 +117,7 @@ def get_projects_json(request):
 
 @login_required(login_url="/login/")
 def create_project(request):
-    # Dua baris berikut yang ditambahkan pada langkah ini.
-    # Cek apakah akun yang sedang login adalah superuser (admin/kamu);
-    # kalau bukan, hentikan permintaannya dengan 403.
-    if not request.user.is_superuser:
+    if not can_create_or_delete(request.user):
         raise PermissionDenied
 
     form = ProjectForm(request.POST or None)
@@ -136,7 +134,11 @@ def create_project(request):
     return render(request, "projects_form.html", context)
 
 
+@login_required(login_url="/login/")
 def update_project(request, project_id):
+    if not can_update(request.user):
+        raise PermissionDenied
+
     project = get_object_or_404(Project, pk=project_id)
     form = ProjectForm(request.POST or None, instance=project)
 
@@ -154,10 +156,7 @@ def update_project(request, project_id):
 
 @login_required(login_url="/login/")
 def delete_project(request, project_id):
-    # Dua baris berikut yang ditambahkan pada langkah ini.
-    # Cek apakah akun yang sedang login adalah superuser (admin/kamu);
-    # kalau bukan, hentikan permintaannya dengan 403.
-    if not request.user.is_superuser:
+    if not can_create_or_delete(request.user):
         raise PermissionDenied
 
     project = get_object_or_404(Project, pk=project_id)
@@ -198,7 +197,11 @@ def get_experience_json(request):
     return HttpResponse(experiences_json, content_type="application/json")
 
 
+@login_required(login_url="/login/")
 def create_experience(request):
+    if not can_create_or_delete(request.user):
+        raise PermissionDenied
+
     form = ExperienceForm(request.POST or None)
 
     if request.method == "POST" and form.is_valid():
@@ -213,7 +216,11 @@ def create_experience(request):
     return render(request, "experience_form.html", context)
 
 
+@login_required(login_url="/login/")
 def update_experience(request, experience_id):
+    if not can_update(request.user):
+        raise PermissionDenied
+
     experience = get_object_or_404(Experience, pk=experience_id)
     form = ExperienceForm(request.POST or None, instance=experience)
 
@@ -230,7 +237,11 @@ def update_experience(request, experience_id):
     return render(request, "experience_form.html", context)
 
 
+@login_required(login_url="/login/")
 def delete_experience(request, experience_id):
+    if not can_create_or_delete(request.user):
+        raise PermissionDenied
+
     experience = get_object_or_404(Experience, pk=experience_id)
 
     if request.method == "POST":
