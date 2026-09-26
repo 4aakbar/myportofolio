@@ -1,4 +1,6 @@
 import uuid
+
+from django.contrib.auth.models import User
 from django.db import models
 from django.utils import timezone
 
@@ -43,6 +45,9 @@ class Project(models.Model):
     category = models.CharField(max_length=20, choices=PROJECT_CATEGORY_CHOICES, default='other')
     link = models.URLField(blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
+    starred_by = models.ManyToManyField(
+        User, related_name="starred_projects", blank=True
+    )
 
     def __str__(self):
         return self.title
