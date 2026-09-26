@@ -80,6 +80,8 @@ def show_experience(request):
         "name": "Andy Aulia Akbar",
         "experience_list": experiences,
         "title_query": title_query,
+        "can_create_or_delete": can_create_or_delete(request.user),
+        "can_update": can_update(request.user),
     }
     return render(request, "experience.html", context)
 
@@ -97,6 +99,8 @@ def show_projects(request):
         "name": "Andy Aulia Akbar",
         "project_list": projects,
         "title_query": title_query,
+        "can_create_or_delete": can_create_or_delete(request.user),
+        "can_update": can_update(request.user),
     }
     return render(request, "projects.html", context)
 

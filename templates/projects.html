@@ -11,7 +11,7 @@
                 <p class="section-kicker">Yang pernah saya bangun</p>
                 <div class="project-header">
                     <h1>Projects</h1>
-                    {% if user.is_superuser %}
+                    {% if can_create_or_delete %}
                         <a href="{% url 'main:create_project' %}" class="button project-add-button">
                             <span aria-hidden="true">+</span>
                             Tambah Proyek
@@ -45,8 +45,10 @@
                                         <a href="{{ project.link }}" class="button" target="_blank" rel="noopener">Lihat Project</a>
                                     {% endif %}
                                     {% include "components/project_star.html" with project=project %}
-                                    <a href="{% url 'main:update_project' project.id %}" class="button">Edit</a>
-                                    {% if user.is_superuser %}
+                                    {% if can_update %}
+                                        <a href="{% url 'main:update_project' project.id %}" class="button">Edit</a>
+                                    {% endif %}
+                                    {% if can_create_or_delete %}
                                         {% include "components/project_delete_modal.html" with project=project %}
                                     {% endif %}
                                 </div>
