@@ -5,16 +5,29 @@ NPM : 2506613590
 Kelas : PBP C
 
 
-### Tugas 3
 
-1. Saya pakai ModelForm (ProjectForm dan ExperienceForm) karena field, tipe input, dan validasinya otomatis diturunkan dari model, jadi tidak perlu menulis ulang tiap field dan validasinya secara manual, dan form.save() sudah tahu cara menyimpan ke model terkait. csrf_token wajib ada di setiap form supaya Django bisa memverifikasi request POST benar-benar berasal dari form aplikasi ini, bukan dari situs lain yang mencoba mengirim request atas nama pengguna (serangan CSRF); tanpa token ini request POST akan ditolak.
+### Tugas 4
 
-2. JSON lebih disukai karena strukturnya lebih ringkas dari XML (tanpa closing tag), sehingga lebih kecil dan lebih cepat diparsing, serta native dipetakan ke object/array JavaScript sehingga langsung bisa dipakai di front-end tanpa parsing tambahan. Django juga sudah menyediakan serializers.serialize untuk JSON, jadi implementasinya jauh lebih sederhana dibanding membangun struktur XML manual. XML masih unggul untuk validasi struktur ketat lewat XML Schema, tapi untuk API sederhana seperti di proyek ini JSON lebih efisien.
+Melanjutkan Tutorial 04 (register, login, logout, cookie `last_login`, dan star pada Project), tugas ini menambahkan otorisasi berbasis peran untuk data Project dan Experience.
 
-3. Alurnya: request GET masuk ke view seperti get_projects_json, lalu data diambil dari database lewat ORM (mis. Project.objects.all()), hasilnya berupa objek model Python yang belum bisa langsung jadi teks JSON. Objek ini perlu diserialize (serializers.serialize) supaya diubah jadi representasi JSON standar berisi field dan value dalam tipe data primitif. Proses ini perlu karena objek model punya tipe data yang tidak otomatis bisa diubah ke teks (mis. UUID atau DateTime), sehingga tanpa serialization datanya tidak konsisten atau gagal diproses. Hasilnya dibungkus HttpResponse dengan content_type JSON lalu dikirim ke client, sehingga bisa dibaca klien apa pun tanpa perlu tahu struktur model Django-nya.
+#### Implementasi
 
-### AI Disclosure Tugas 3
+- **Peran Editor**: grup `Editor` dibuat otomatis oleh migrasi `main/migrations/0005_create_editor_group.py` beserta permission `change_project` dan `change_experience`. Akun dijadikan Editor lewat Django Admin.
+- **Pengecekan di server**: aturan peran dikumpulkan di `main/permissions.py` (`is_editor`, `can_update`, `can_create_or_delete`). Setiap view create/update/delete memakai `@login_required` (pengunjung diarahkan ke login) lalu memanggil helper tersebut dan melempar `PermissionDenied` (HTTP 403) jika tidak berhak.
+- **Template**: `show_projects` dan `show_experience` mengirim `can_update` dan `can_create_or_delete` ke template, sehingga tombol Tambah/Edit/Hapus hanya tampil bagi peran yang berhak. Template tidak mengecek `is_superuser` sendiri, jadi aturan peran hanya ada di satu tempat.
+- **Star**: `Project.starred_by` adalah `ManyToManyField` ke `User`. View `toggle_star` hanya memproses POST dengan `{% csrf_token %}` dan memakai `add`/`remove`, sehingga satu pengguna maksimal memberi satu star. Kartu proyek menampilkan jumlah star dan status Star/Unstar milik pengguna.
+- **Endpoint JSON**: `/api/projects/` sebelumnya ikut mengirim `starred_by` berisi username semua pemberi star kepada siapa pun. Sekarang field yang diserialisasi dibatasi eksplisit, jadi data akun pengguna tidak ikut terkirim. `/api/experience/` tidak memiliki relasi ke `User`.
 
-Saya menggunakan AI untuk membantu memahami ModelForm, csrf_token, JSON vs XML, dan alur serialization di atas sebelum menulis jawaban dengan pemahaman dan verifikasi personal. Saya juga berdiskusi dengan AI soal penyamaan pola show_experience dengan show_projects, penambahan fitur pencarian di halaman experience, kemampuan update pada Project, serta input tanggal mulai pada Experience beserta tampilan rentang tanggalnya. Hasilnya saya verifikasi lewat manage.py check, migrate, dan runserver sebelum saya commit dan push sendiri.
 
+#### Verifikasi
+
+Semua peran diuji dengan Django test client di database uji sementara (data asli tidak tersentuh): setiap endpoint create/update/delete/star dicoba sebagai pengunjung, pengguna biasa, Editor, dan superuser, lalu status responsnya (302 ke login / 403 / 200) dan tombol yang tampil di template dicocokkan dengan tabel di atas. `python manage.py check` tidak menemukan masalah.
+
+### AI Disclosure Tugas 4
+
+- Tools: Claude
+- **Strategi prompting**: saya meminta AI membaca soal lalu memecahnya menjadi tahapan tanpa langsung mengerjakan. Setiap tahap saya review, lalu saya commit sendiri sebelum lanjut ke tahap berikutnya
+- **Bagian yang dibantu AI**: `main/permissions.py`, migrasi grup Editor, pengecekan peran di view Project dan Experience, penyesuaian template, pembatasan field pada `/api/projects/`, dan dokumentasi ini
+- **prompt**: coba lihat tugas ini, coba ubah tugas ini menjadi 4 bagian. tiap bagian dibagi lagi menjadi langkah, langkah yang perlu saya kerjakan. saya akan mengerjakan 4 bagian itu secara berkala dan anda harus mengecek apakah langkah sudah sesuai atau belum dan jelaskan bagaimana semua di bagian itu bekerja
+- **Keterbatasan AI yang terlihat**: tidak ada sejauh ini.
 

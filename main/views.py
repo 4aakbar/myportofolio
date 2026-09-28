@@ -114,8 +114,11 @@ def get_projects_json(request):
     if title_query:
         projects = projects.filter(title__icontains=title_query)
 
+    # starred_by sengaja tidak diserialisasi agar username pemberi star tidak terekspos ke publik.
     projects_json = serializers.serialize(
-        "json", projects, use_natural_foreign_keys=True
+        "json",
+        projects,
+        fields=("title", "description", "category", "link", "created_at"),
     )
     return HttpResponse(projects_json, content_type="application/json")
 
