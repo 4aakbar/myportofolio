@@ -6,7 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.core import serializers
 from django.core.exceptions import PermissionDenied
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
 from main.forms import ExperienceForm, ProjectForm
@@ -86,14 +86,11 @@ def show_experience(request):
     return render(request, "experience.html", context)
 
 def show_projects(request):
-    json_response = get_projects_json(request)
-
-    projects = serializers.deserialize(
-        "json",
-        json_response.content.decode("utf-8"),
-    )
-    projects = [project.object for project in projects]
     title_query = request.GET.get("title", "").strip()
+    projects = Project.objects.all()
+
+    if title_query:
+        projects = projects.filter(title__icontains=title_query)
 
     context = {
         "name": "Andy Aulia Akbar",
@@ -109,18 +106,32 @@ def show_projects(request):
 
 def get_projects_json(request):
     title_query = request.GET.get("title", "").strip()
-    projects = Project.objects.all()
+    projects = Project.objects.prefetch_related("starred_by").all()
 
     if title_query:
         projects = projects.filter(title__icontains=title_query)
 
-    # starred_by sengaja tidak diserialisasi agar username pemberi star tidak terekspos ke publik.
-    projects_json = serializers.serialize(
-        "json",
-        projects,
-        fields=("title", "description", "category", "link", "created_at"),
-    )
-    return HttpResponse(projects_json, content_type="application/json")
+    data = []
+    for project in projects:
+        starred_users = project.starred_by.all()
+        is_starred = request.user in starred_users if request.user.is_authenticated else False
+
+        # Hanya jumlah star yang dikirim; username pemberi star sengaja tidak diekspos ke publik.
+        data.append({
+            "pk": str(project.id),
+            "fields": {
+                "title": project.title,
+                "description": project.description,
+                "category": project.category,
+                "category_display": project.get_category_display(),
+                "link": project.link,
+                "created_at": project.created_at.isoformat(),
+                "star_count": len(starred_users),
+                "is_starred": is_starred,
+            },
+        })
+
+    return JsonResponse(data, safe=False)
 
 @login_required(login_url="/login/")
 def create_project(request):
