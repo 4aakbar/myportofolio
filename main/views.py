@@ -86,15 +86,11 @@ def show_experience(request):
     return render(request, "experience.html", context)
 
 def show_projects(request):
+    # Daftar proyek dimuat lewat AJAX dari get_projects_json; view ini cukup mengirim kerangka halaman.
     title_query = request.GET.get("title", "").strip()
-    projects = Project.objects.all()
-
-    if title_query:
-        projects = projects.filter(title__icontains=title_query)
 
     context = {
         "name": "Andy Aulia Akbar",
-        "project_list": projects,
         "title_query": title_query,
         "can_create_or_delete": can_create_or_delete(request.user),
         "can_update": can_update(request.user),
