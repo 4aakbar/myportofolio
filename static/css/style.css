@@ -126,6 +126,21 @@ h3,
     background: var(--lime);
 }
 
+.site-header nav .nav-user {
+    padding: 0.5rem 0.9rem;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.nav-divider {
+    align-self: center;
+    width: 1px;
+    height: 1.25rem;
+    margin: 0 0.25rem;
+    background: var(--line);
+}
+
 .hero {
     position: relative;
     padding: 7rem 0 8rem;
@@ -423,7 +438,8 @@ h3,
         padding: 1rem 0;
     }
 
-    .site-header nav a {
+    .site-header nav a,
+    .site-header nav .nav-user {
         padding: 0.45rem 0.65rem;
         font-size: 0.8rem;
     }
