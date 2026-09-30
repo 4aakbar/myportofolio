@@ -8,6 +8,7 @@ from django.core import serializers
 from django.core.exceptions import PermissionDenied
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_POST
 
 from main.forms import ExperienceForm, ProjectForm
 from main.models import Experience, Project
@@ -92,6 +93,7 @@ def show_projects(request):
     context = {
         "name": "Andy Aulia Akbar",
         "title_query": title_query,
+        "form": ProjectForm(),
         "can_create_or_delete": can_create_or_delete(request.user),
         "can_update": can_update(request.user),
     }
@@ -146,6 +148,25 @@ def create_project(request):
         "form": form,
     }
     return render(request, "projects_form.html", context)
+
+
+@require_POST
+def create_project_ajax(request):
+    if not can_create_or_delete(request.user):
+        return JsonResponse(
+            {"message": "Hanya pemilik portofolio yang dapat menambahkan proyek."},
+            status=403,
+        )
+
+    form = ProjectForm(request.POST)
+    if form.is_valid():
+        project = form.save()
+        return JsonResponse(
+            {"message": "Proyek berhasil ditambahkan.", "pk": str(project.id)},
+            status=201,
+        )
+
+    return JsonResponse({"errors": form.errors.get_json_data()}, status=400)
 
 
 @login_required(login_url="/login/")
