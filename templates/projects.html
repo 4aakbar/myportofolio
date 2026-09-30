@@ -84,6 +84,16 @@
             gridContainer.classList.toggle('hide', !showGrid);
         }
 
+        // Data dari JSON tidak ikut di-escape otomatis oleh Django, jadi wajib di-escape sebelum masuk innerHTML.
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#39;');
+        }
+
         function buildStarHtml(project, starUrl) {
             const isStarredClass = project.is_starred ? ' is-starred' : '';
             const starText = project.is_starred ? 'Unstar' : 'Star';
@@ -100,7 +110,7 @@
                     <button type="submit" class="button button-star${isStarredClass}" title="${starTitle}">
                         <span aria-hidden="true">&#9733;</span>
                         ${starText}
-                        <span class="star-count">${project.star_count}</span>
+                        <span class="star-count">${escapeHtml(project.star_count)}</span>
                     </button>
                 </form>
             `;
@@ -113,7 +123,7 @@
                 <button type="button"
                         class="button button-danger"
                         popovertarget="${modalId}"
-                        aria-label="Hapus ${project.title}"
+                        aria-label="Hapus ${escapeHtml(project.title)}"
                         title="Hapus proyek">
                     Hapus Proyek
                 </button>
@@ -137,7 +147,7 @@
                         <h2 id="${modalId}-title">Hapus Projek?</h2>
                         <p>
                             Apakah Anda yakin ingin menghapus
-                            <strong>${project.title}</strong>?
+                            <strong>${escapeHtml(project.title)}</strong>?
                         </p>
                         <div class="project-delete-modal__actions">
                             <button type="button"
@@ -162,7 +172,7 @@
             articleElement.className = 'showcase-card';
 
             const linkHtml = project.link
-                ? `<a href="${project.link}" class="button" target="_blank" rel="noopener">Lihat Project</a>`
+                ? `<a href="${escapeHtml(project.link)}" class="button" target="_blank" rel="noopener">Lihat Project</a>`
                 : '';
 
             const updateHtml = CAN_UPDATE
@@ -175,10 +185,10 @@
 
             articleElement.innerHTML = `
                 <div class="showcase-card-top">
-                    <span class="showcase-tag">${project.category_display}</span>
+                    <span class="showcase-tag">${escapeHtml(project.category_display)}</span>
                 </div>
-                <h2>${project.title}</h2>
-                <p class="showcase-description">${project.description}</p>
+                <h2>${escapeHtml(project.title)}</h2>
+                <p class="showcase-description">${escapeHtml(project.description)}</p>
                 <div class="project-card-actions">
                     <div class="project-actions">
                         ${linkHtml}
