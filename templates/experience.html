@@ -12,10 +12,12 @@
                 <div class="project-header">
                     <h1>Experience</h1>
                     {% if can_create_or_delete %}
-                        <a href="{% url 'main:create_experience' %}" class="button project-add-button">
+                        <button type="button"
+                                class="button project-add-button"
+                                popovertarget="add-experience-modal">
                             <span aria-hidden="true">+</span>
                             Tambah Pengalaman
-                        </a>
+                        </button>
                     {% endif %}
                 </div>
 
@@ -47,8 +49,13 @@
         </section>
     </main>
 
+    {% if can_create_or_delete %}
+        {% include "components/experience_form_modal.html" %}
+    {% endif %}
+
     <script>
         const BASE_EXPERIENCE_ENDPOINT = "{% url 'main:get_experience_json' %}";
+        const CREATE_EXPERIENCE_ENDPOINT = "{% url 'main:create_experience_ajax' %}";
         const IS_AUTHENTICATED = "{{ user.is_authenticated|yesno:'true,false' }}" === "true";
         const CAN_CREATE_OR_DELETE = "{{ can_create_or_delete|yesno:'true,false' }}" === "true";
         const CAN_UPDATE = "{{ can_update|yesno:'true,false' }}" === "true";
@@ -259,6 +266,59 @@
             clearTimeout(searchDebounceTimer);
             searchExperiences();
         });
+
+        const experienceForm = document.getElementById('experience-form');
+
+        function closeExperienceModal() {
+            document.getElementById('add-experience-modal').hidePopover();
+        }
+
+        // Ubah format errors dari form.errors.get_json_data() menjadi "Label: pesan" supaya jelas field mana yang salah.
+        function formatValidationErrors(errors) {
+            return Object.entries(errors).flatMap(([fieldName, fieldErrors]) => {
+                const label = experienceForm.querySelector(`label[for="id_${fieldName}"]`);
+                const prefix = label ? `${label.textContent}: ` : '';
+                return fieldErrors.map(error => `${prefix}${error.message}`);
+            });
+        }
+
+        async function addExperience(event) {
+            event.preventDefault();
+
+            const submitButton = experienceForm.querySelector('button[type="submit"]');
+            submitButton.disabled = true;
+
+            try {
+                const response = await fetch(CREATE_EXPERIENCE_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': getCookie('csrftoken') || CSRF_TOKEN },
+                    body: new FormData(experienceForm),
+                });
+                const result = await response.json().catch(() => ({}));
+
+                if (response.ok) {
+                    experienceForm.reset();
+                    closeExperienceModal();
+                    showToast('Berhasil', 'Pengalaman baru berhasil ditambahkan!', 'success');
+                    searchExperiences();
+                } else {
+                    const errorMessages = result.errors
+                        ? formatValidationErrors(result.errors)
+                        : [result.message || `Terjadi kesalahan (status ${response.status}).`];
+                    showToast('Gagal menambahkan pengalaman', errorMessages.join(' '), 'error', 5000);
+                }
+            } catch (error) {
+                console.error('Error adding experience:', error);
+                showToast('Gagal menambahkan pengalaman', 'Tidak dapat terhubung ke server. Silakan coba lagi.', 'error');
+            } finally {
+                submitButton.disabled = false;
+            }
+        }
+
+        // Modal dan form hanya dirender untuk pemilik portofolio; untuk peran lain elemennya null.
+        if (experienceForm) {
+            experienceForm.addEventListener('submit', addExperience);
+        }
 
         searchExperiences();
     </script>

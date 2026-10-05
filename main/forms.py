@@ -96,3 +96,24 @@ class ExperienceForm(ModelForm):
             "started_at": DateInput(attrs={"type": "date"}),
             "ended_at": DateInput(attrs={"type": "date"}),
         }
+
+    def clean_title(self):
+        title = strip_tags(self.cleaned_data["title"]).strip()
+        if not title:
+            raise ValidationError("Nama pengalaman tidak boleh hanya berisi tag HTML.")
+        return title
+
+    def clean_description(self):
+        description = strip_tags(self.cleaned_data["description"]).strip()
+        if not description:
+            raise ValidationError("Deskripsi tidak boleh kosong atau hanya berisi tag HTML.")
+        return description
+
+    def clean(self):
+        cleaned_data = super().clean()
+        started_at = cleaned_data.get("started_at")
+        ended_at = cleaned_data.get("ended_at")
+
+        if started_at and ended_at and ended_at < started_at:
+            self.add_error("ended_at", "Tanggal berakhir tidak boleh sebelum tanggal mulai.")
+        return cleaned_data

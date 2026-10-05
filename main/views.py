@@ -265,6 +265,26 @@ def create_experience(request):
     return render(request, "experience_form.html", context)
 
 
+@require_POST
+def create_experience_ajax(request):
+    # Hak akses dicek di sini juga, bukan cuma dengan menyembunyikan tombol di template.
+    if not can_create_or_delete(request.user):
+        return JsonResponse(
+            {"message": "Hanya pemilik portofolio yang dapat menambahkan pengalaman."},
+            status=403,
+        )
+
+    form = ExperienceForm(request.POST)
+    if form.is_valid():
+        experience = form.save()
+        return JsonResponse(
+            {"message": "Pengalaman berhasil ditambahkan.", "pk": str(experience.id)},
+            status=201,
+        )
+
+    return JsonResponse({"errors": form.errors.get_json_data()}, status=400)
+
+
 @login_required(login_url="/login/")
 def update_experience(request, experience_id):
     if not can_update(request.user):
