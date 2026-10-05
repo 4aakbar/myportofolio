@@ -84,16 +84,6 @@
             gridContainer.classList.toggle('hide', !showGrid);
         }
 
-        // Data dari JSON tidak ikut di-escape otomatis oleh Django, jadi wajib di-escape sebelum masuk innerHTML.
-        function escapeHtml(value) {
-            return String(value ?? '')
-                .replaceAll('&', '&amp;')
-                .replaceAll('<', '&lt;')
-                .replaceAll('>', '&gt;')
-                .replaceAll('"', '&quot;')
-                .replaceAll("'", '&#39;');
-        }
-
         function buildStarHtml(project, starUrl) {
             const isStarredClass = project.is_starred ? ' is-starred' : '';
             const starText = project.is_starred ? 'Unstar' : 'Star';

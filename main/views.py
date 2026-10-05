@@ -4,9 +4,8 @@ from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
-from django.core import serializers
 from django.core.exceptions import PermissionDenied
-from django.http import HttpResponse, JsonResponse
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
@@ -68,19 +67,13 @@ def logout_user(request):
 
 
 def show_experience(request):
-    json_response = get_experience_json(request)
-
-    experiences = serializers.deserialize(
-        "json",
-        json_response.content.decode("utf-8"),
-    )
-    experiences = [experience.object for experience in experiences]
+    # Daftar pengalaman dimuat lewat AJAX dari get_experience_json; view ini cukup mengirim kerangka halaman.
     title_query = request.GET.get("title", "").strip()
 
     context = {
         "name": "Andy Aulia Akbar",
-        "experience_list": experiences,
         "title_query": title_query,
+        "form": ExperienceForm(),
         "can_create_or_delete": can_create_or_delete(request.user),
         "can_update": can_update(request.user),
     }
@@ -223,13 +216,34 @@ def toggle_star(request, project_id):
 
 def get_experience_json(request):
     title_query = request.GET.get("title", "").strip()
-    experiences = Experience.objects.all()
+    experiences = Experience.objects.prefetch_related("starred_by").all()
 
     if title_query:
         experiences = experiences.filter(title__icontains=title_query)
 
-    experiences_json = serializers.serialize("json", experiences)
-    return HttpResponse(experiences_json, content_type="application/json")
+    data = []
+    for experience in experiences:
+        starred_users = experience.starred_by.all()
+        is_starred = request.user in starred_users if request.user.is_authenticated else False
+
+        # Sama seperti project: hanya jumlah star yang dikirim, bukan username pemberi star.
+        data.append({
+            "pk": str(experience.id),
+            "fields": {
+                "title": experience.title,
+                "description": experience.description,
+                "category": experience.category,
+                "category_display": experience.get_category_display(),
+                "thumbnail": experience.thumbnail or "",
+                "started_at": experience.started_at.isoformat(),
+                "ended_at": experience.ended_at.isoformat() if experience.ended_at else None,
+                "is_ongoing": experience.is_ongoing,
+                "star_count": len(starred_users),
+                "is_starred": is_starred,
+            },
+        })
+
+    return JsonResponse(data, safe=False)
 
 
 @login_required(login_url="/login/")
@@ -283,6 +297,19 @@ def delete_experience(request, experience_id):
         experience.delete()
         messages.success(request, "Pengalaman berhasil dihapus!")
         return redirect("main:show_experience")
+
+    return redirect("main:show_experience")
+
+
+@login_required(login_url="/login/")
+def toggle_star_experience(request, experience_id):
+    experience = get_object_or_404(Experience, pk=experience_id)
+
+    if request.method == "POST":
+        if request.user in experience.starred_by.all():
+            experience.starred_by.remove(request.user)
+        else:
+            experience.starred_by.add(request.user)
 
     return redirect("main:show_experience")
 
