@@ -19,10 +19,7 @@
                     {% endif %}
                 </div>
 
-                <form method="get"
-                      action="{% url 'main:show_experience' %}"
-                      id="experience-search-form"
-                      class="project-search">
+                <form id="experience-search-form" class="project-search">
                     <input type="search"
                            id="search-input"
                            name="title"
@@ -60,12 +57,17 @@
         const UPDATE_URL_TEMPLATE = "{% url 'main:update_experience' '00000000-0000-0000-0000-000000000000' %}";
         const DELETE_URL_TEMPLATE = "{% url 'main:delete_experience' '00000000-0000-0000-0000-000000000000' %}";
         const STAR_URL_TEMPLATE = "{% url 'main:toggle_star_experience' '00000000-0000-0000-0000-000000000000' %}";
+        const SEARCH_DEBOUNCE_DELAY = 300;
+
+        let experiencesAbortController;
+        let searchDebounceTimer;
 
         const loadingState = document.getElementById('loading');
         const errorState = document.getElementById('error');
         const emptyState = document.getElementById('empty');
         const emptyMessage = document.getElementById('empty-message');
         const gridContainer = document.getElementById('grid');
+        const searchForm = document.getElementById('experience-search-form');
         const searchInput = document.getElementById('search-input');
 
         function displayPageSection({ showLoading = false, showError = false, showEmpty = false, showGrid = false }) {
@@ -202,6 +204,10 @@
         }
 
         async function fetchExperiences(searchQuery = '') {
+            // Batalkan request sebelumnya supaya hasil pencarian lama tidak menimpa hasil terbaru.
+            if (experiencesAbortController) experiencesAbortController.abort();
+            experiencesAbortController = new AbortController();
+
             try {
                 displayPageSection({ showLoading: true });
 
@@ -211,6 +217,7 @@
 
                 const response = await fetch(url, {
                     headers: { 'Accept': 'application/json' },
+                    signal: experiencesAbortController.signal,
                 });
 
                 if (!response.ok) throw new Error('Failed to fetch data');
@@ -230,11 +237,29 @@
                     displayPageSection({ showGrid: true });
                 }
             } catch (error) {
+                if (error.name === 'AbortError') return;
                 console.error('Error loading experiences:', error);
                 displayPageSection({ showError: true });
             }
         }
 
-        fetchExperiences(searchInput.value.trim());
+        function searchExperiences() {
+            fetchExperiences(searchInput.value.trim());
+        }
+
+        // Request baru dikirim setelah pengguna berhenti mengetik selama SEARCH_DEBOUNCE_DELAY ms.
+        searchInput.addEventListener('input', function () {
+            clearTimeout(searchDebounceTimer);
+            searchDebounceTimer = setTimeout(searchExperiences, SEARCH_DEBOUNCE_DELAY);
+        });
+
+        // Tombol Cari / Enter langsung mencari tanpa menunggu debounce dan tanpa reload halaman.
+        searchForm.addEventListener('submit', function (event) {
+            event.preventDefault();
+            clearTimeout(searchDebounceTimer);
+            searchExperiences();
+        });
+
+        searchExperiences();
     </script>
 {% endblock content %}
