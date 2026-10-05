@@ -1,3 +1,4 @@
+from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -40,28 +41,105 @@ class MainTest(TestCase):
     def test_experience_page(self):
         response = self.client.get(reverse("main:show_experience"))
 
+        # Halaman hanya berisi kerangka; data pengalaman dimuat lewat AJAX.
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "experience.html")
-        self.assertContains(response, self.experience.title)
-        self.assertContains(response, self.experience.description, html=True)
-        self.assertContains(response, "Volunteer")
-        self.assertContains(response, "Sedang berlangsung")
+        self.assertNotContains(response, self.experience.title)
+        self.assertContains(response, reverse("main:get_experience_json"))
         self.assertContains(response, f'href="{reverse("main:show_main")}"')
 
-    def test_empty_experience_page(self):
-        Experience.objects.all().delete()
-        response = self.client.get(reverse("main:show_experience"))
+    def test_experience_json(self):
+        response = self.client.get(reverse("main:get_experience_json"))
+        data = response.json()
 
-        self.assertContains(response, "Belum ada pengalaman yang ditambahkan.")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(data), 1)
+        fields = data[0]["fields"]
+        self.assertEqual(fields["title"], self.experience.title)
+        self.assertEqual(fields["category_display"], "Volunteer")
+        self.assertTrue(fields["is_ongoing"])
+        self.assertEqual(fields["star_count"], 0)
+        self.assertFalse(fields["is_starred"])
+
+    def test_experience_json_search(self):
+        Experience.objects.create(title="Riset AI", description="Riset", category="research")
+
+        data = self.client.get(reverse("main:get_experience_json"), {"title": "riset"}).json()
+
+        self.assertEqual([item["fields"]["title"] for item in data], ["Riset AI"])
+
+    def test_empty_experience_json(self):
+        Experience.objects.all().delete()
+        response = self.client.get(reverse("main:get_experience_json"))
+
+        self.assertEqual(response.json(), [])
 
     def test_completed_experience(self):
         self.experience.ended_at = timezone.now()
         self.experience.save()
-        response = self.client.get(reverse("main:show_experience"))
+        fields = self.client.get(reverse("main:get_experience_json")).json()[0]["fields"]
 
         self.assertFalse(self.experience.is_ongoing)
-        self.assertContains(response, "Selesai")
-        self.assertNotContains(response, "Sedang berlangsung")
+        self.assertFalse(fields["is_ongoing"])
+        self.assertIsNotNone(fields["ended_at"])
+
+
+class ExperienceAjaxTest(TestCase):
+    def setUp(self):
+        self.url = reverse("main:create_experience_ajax")
+        self.valid_data = {
+            "title": "Magang Backend",
+            "description": "Membangun API",
+            "category": "internship",
+            "started_at": "2025-01-01",
+        }
+        self.owner = User.objects.create_superuser("owner", password="rahasia-123")
+        self.user = User.objects.create_user("pengunjung", password="rahasia-123")
+
+    def test_create_requires_owner(self):
+        self.assertEqual(self.client.post(self.url, self.valid_data).status_code, 403)
+
+        self.client.login(username="pengunjung", password="rahasia-123")
+        self.assertEqual(self.client.post(self.url, self.valid_data).status_code, 403)
+        self.assertFalse(Experience.objects.exists())
+
+    def test_create_valid(self):
+        self.client.login(username="owner", password="rahasia-123")
+        response = self.client.post(self.url, self.valid_data)
+
+        self.assertEqual(response.status_code, 201)
+        self.assertTrue(Experience.objects.filter(pk=response.json()["pk"]).exists())
+
+    def test_create_invalid(self):
+        self.client.login(username="owner", password="rahasia-123")
+        response = self.client.post(self.url, {**self.valid_data, "title": ""})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("title", response.json()["errors"])
+
+    def test_create_strips_html_tags(self):
+        self.client.login(username="owner", password="rahasia-123")
+        xss = "<img src=\"x\" onerror=\"alert('XSS!')\">"
+
+        rejected = self.client.post(self.url, {**self.valid_data, "title": xss})
+        accepted = self.client.post(self.url, {**self.valid_data, "title": f"Magang {xss}<b>Keren</b>"})
+
+        self.assertEqual(rejected.status_code, 400)
+        self.assertEqual(accepted.status_code, 201)
+        self.assertEqual(Experience.objects.get(pk=accepted.json()["pk"]).title, "Magang Keren")
+
+    def test_toggle_star(self):
+        experience = Experience.objects.create(title="Riset", description="Riset", category="research")
+        star_url = reverse("main:toggle_star_experience", args=[experience.id])
+        self.client.login(username="pengunjung", password="rahasia-123")
+
+        self.client.post(star_url)
+        fields = self.client.get(reverse("main:get_experience_json")).json()[0]["fields"]
+        self.assertEqual(fields["star_count"], 1)
+        self.assertTrue(fields["is_starred"])
+
+        self.client.post(star_url)
+        self.assertEqual(experience.starred_by.count(), 0)
 
 
 class ProjectTest(TestCase):
@@ -86,23 +164,22 @@ class ProjectTest(TestCase):
         self.assertEqual(str(self.project), "Veto")
         self.assertEqual(self.project.category, "ai")
 
-    def test_projects_page_shows_data(self):
-        response = self.client.get(reverse("main:show_projects"))
+    def test_projects_json_shows_data(self):
+        fields = self.client.get(reverse("main:get_projects_json")).json()[0]["fields"]
 
-        self.assertContains(response, self.project.title)
-        self.assertContains(response, self.project.description, html=True)
-        self.assertContains(response, "AI/ML")
-        self.assertContains(response, f'href="{reverse("main:show_main")}"')
+        self.assertEqual(fields["title"], self.project.title)
+        self.assertEqual(fields["description"], self.project.description)
+        self.assertEqual(fields["category_display"], "AI/ML")
 
-    def test_projects_page_with_link(self):
+    def test_projects_json_with_link(self):
         self.project.link = "https://github.com/4aakbar/veto"
         self.project.save()
-        response = self.client.get(reverse("main:show_projects"))
+        fields = self.client.get(reverse("main:get_projects_json")).json()[0]["fields"]
 
-        self.assertContains(response, f'href="{self.project.link}"')
+        self.assertEqual(fields["link"], self.project.link)
 
-    def test_empty_projects_page(self):
+    def test_empty_projects_json(self):
         Project.objects.all().delete()
-        response = self.client.get(reverse("main:show_projects"))
+        response = self.client.get(reverse("main:get_projects_json"))
 
-        self.assertContains(response, "Belum ada proyek yang ditambahkan.")
+        self.assertEqual(response.json(), [])
