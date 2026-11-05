@@ -1,15 +1,12 @@
 from django.urls import path
 
+from main.api_views import ProjectDetailAPIView, ProjectListCreateAPIView, ProjectStarAPIView
 from main.views import (
     show_main,
     show_experience,
     show_projects,
     create_project,
-    create_project_ajax,
     update_project,
-    delete_project,
-    toggle_star,
-    get_projects_json,
     create_experience,
     create_experience_ajax,
     update_experience,
@@ -34,11 +31,10 @@ urlpatterns = [
     path("api/experience/", get_experience_json, name="get_experience_json"),
     path("projects/", show_projects, name="show_projects"),
     path("projects/add/", create_project, name="create_project"),
-    path("projects/add-ajax/", create_project_ajax, name="create_project_ajax"),
     path("projects/<uuid:project_id>/edit/", update_project, name="update_project"),
-    path("projects/<uuid:project_id>/delete/", delete_project, name="delete_project"),
-    path("projects/<uuid:project_id>/star/", toggle_star, name="toggle_star"),
-    path("api/projects/", get_projects_json, name="get_projects_json"),
+    path("api/projects/", ProjectListCreateAPIView.as_view(), name="project_list_api"),
+    path("api/projects/<uuid:pk>/", ProjectDetailAPIView.as_view(), name="project_detail_api"),
+    path("api/projects/<uuid:pk>/star/", ProjectStarAPIView.as_view(), name="project_star_api"),
     path("register/", register, name="register"),
     path("login/", login_user, name="login"),
     path("logout/", logout_user, name="logout"),

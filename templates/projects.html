@@ -54,16 +54,16 @@
     {% endif %}
 
     <script>
-        const BASE_PROJECTS_ENDPOINT = "{% url 'main:get_projects_json' %}";
-        const CREATE_PROJECT_ENDPOINT = "{% url 'main:create_project_ajax' %}";
+        const BASE_PROJECTS_ENDPOINT = "{% url 'main:project_list_api' %}";
+        const LOGIN_URL = "{% url 'main:login' %}";
         const IS_AUTHENTICATED = "{{ user.is_authenticated|yesno:'true,false' }}" === "true";
         const CAN_CREATE_OR_DELETE = "{{ can_create_or_delete|yesno:'true,false' }}" === "true";
         const CAN_UPDATE = "{{ can_update|yesno:'true,false' }}" === "true";
         const CSRF_TOKEN = "{{ csrf_token }}";
         const PLACEHOLDER_ID = "00000000-0000-0000-0000-000000000000";
         const UPDATE_URL_TEMPLATE = "{% url 'main:update_project' '00000000-0000-0000-0000-000000000000' %}";
-        const DELETE_URL_TEMPLATE = "{% url 'main:delete_project' '00000000-0000-0000-0000-000000000000' %}";
-        const STAR_URL_TEMPLATE = "{% url 'main:toggle_star' '00000000-0000-0000-0000-000000000000' %}";
+        const DETAIL_URL_TEMPLATE = "{% url 'main:project_detail_api' '00000000-0000-0000-0000-000000000000' %}";
+        const STAR_URL_TEMPLATE = "{% url 'main:project_star_api' '00000000-0000-0000-0000-000000000000' %}";
         const SEARCH_DEBOUNCE_DELAY = 300;
 
         let projectsAbortController;
@@ -95,14 +95,13 @@
             }
 
             return `
-                <form method="post" action="${starUrl}" class="star-form">
-                    <input type="hidden" name="csrfmiddlewaretoken" value="${CSRF_TOKEN}">
-                    <button type="submit" class="button button-star${isStarredClass}" title="${starTitle}">
+                <div class="star-form">
+                    <button type="button" class="button button-star${isStarredClass}" title="${starTitle}" data-star-url="${starUrl}">
                         <span aria-hidden="true">&#9733;</span>
                         ${starText}
                         <span class="star-count">${escapeHtml(project.star_count)}</span>
                     </button>
-                </form>
+                </div>
             `;
         }
 
@@ -144,19 +143,15 @@
                                     class="button button-secondary"
                                     popovertarget="${modalId}"
                                     popovertargetaction="hide">Batal</button>
-                            <form method="post" action="${deleteUrl}">
-                                <input type="hidden" name="csrfmiddlewaretoken" value="${CSRF_TOKEN}">
-                                <button type="submit" class="button button-danger">Ya, Hapus</button>
-                            </form>
+                            <button type="button" class="button button-danger" data-delete-url="${deleteUrl}">Ya, Hapus</button>
                         </div>
                     </div>
                 </div>
             `;
         }
 
-        function buildProjectCardElement(item) {
-            const project = item.fields;
-            const projectId = item.pk;
+        function buildProjectCardElement(project) {
+            const projectId = project.id;
 
             const articleElement = document.createElement('article');
             articleElement.className = 'showcase-card';
@@ -170,7 +165,7 @@
                 : '';
 
             const deleteHtml = CAN_CREATE_OR_DELETE
-                ? buildDeleteHtml(project, projectId, DELETE_URL_TEMPLATE.replace(PLACEHOLDER_ID, projectId))
+                ? buildDeleteHtml(project, projectId, DETAIL_URL_TEMPLATE.replace(PLACEHOLDER_ID, projectId))
                 : '';
 
             articleElement.innerHTML = `
@@ -220,8 +215,8 @@
                     displayPageSection({ showEmpty: true });
                 } else {
                     gridContainer.innerHTML = '';
-                    projectData.forEach(item => {
-                        gridContainer.appendChild(buildProjectCardElement(item));
+                    projectData.forEach(project => {
+                        gridContainer.appendChild(buildProjectCardElement(project));
                     });
                     displayPageSection({ showGrid: true });
                 }
@@ -247,6 +242,73 @@
             searchProjects();
         });
 
+        function getApiErrorMessage(result, status) {
+            // DRF mengirim {"detail": "..."} untuk error izin dan {"field": ["..."]} untuk error validasi.
+            const messages = result.detail ? [result.detail] : Object.values(result).flat();
+            return messages.length ? messages.join(' ') : `Terjadi kesalahan (status ${status}).`;
+        }
+
+        async function toggleProjectStar(button) {
+            if (!IS_AUTHENTICATED) {
+                window.location.href = LOGIN_URL;
+                return;
+            }
+
+            button.disabled = true;
+
+            try {
+                const response = await fetch(button.dataset.starUrl, {
+                    method: 'POST',
+                    headers: { 'Accept': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+                });
+
+                if (response.ok) {
+                    searchProjects();
+                } else {
+                    const result = await response.json().catch(() => ({}));
+                    showToast('Gagal memberi star', getApiErrorMessage(result, response.status), 'error');
+                    button.disabled = false;
+                }
+            } catch (error) {
+                console.error('Error toggling star:', error);
+                showToast('Gagal memberi star', 'Tidak dapat terhubung ke server. Silakan coba lagi.', 'error');
+                button.disabled = false;
+            }
+        }
+
+        async function deleteProject(button) {
+            button.disabled = true;
+
+            try {
+                const response = await fetch(button.dataset.deleteUrl, {
+                    method: 'DELETE',
+                    headers: { 'Accept': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+                });
+
+                if (response.ok) {
+                    showToast('Berhasil', 'Proyek berhasil dihapus!', 'success');
+                    searchProjects();
+                } else {
+                    const result = await response.json().catch(() => ({}));
+                    showToast('Gagal menghapus proyek', getApiErrorMessage(result, response.status), 'error');
+                    button.disabled = false;
+                }
+            } catch (error) {
+                console.error('Error deleting project:', error);
+                showToast('Gagal menghapus proyek', 'Tidak dapat terhubung ke server. Silakan coba lagi.', 'error');
+                button.disabled = false;
+            }
+        }
+
+        // Kartu dirender ulang setiap fetch, jadi event ditangani di grid yang selalu ada.
+        gridContainer.addEventListener('click', function (event) {
+            const starButton = event.target.closest('[data-star-url]');
+            const deleteButton = event.target.closest('[data-delete-url]');
+
+            if (starButton) toggleProjectStar(starButton);
+            if (deleteButton) deleteProject(deleteButton);
+        });
+
         const projectForm = document.getElementById('project-form');
 
         function closeProjectModal() {
@@ -260,9 +322,9 @@
             submitButton.disabled = true;
 
             try {
-                const response = await fetch(CREATE_PROJECT_ENDPOINT, {
+                const response = await fetch(BASE_PROJECTS_ENDPOINT, {
                     method: 'POST',
-                    headers: { 'X-CSRFToken': CSRF_TOKEN },
+                    headers: { 'Accept': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
                     body: new FormData(projectForm),
                 });
                 const result = await response.json().catch(() => ({}));
@@ -273,10 +335,7 @@
                     showToast('Berhasil', 'Proyek baru berhasil ditambahkan!', 'success');
                     searchProjects();
                 } else {
-                    const errorMessages = result.errors
-                        ? Object.values(result.errors).flat().map(error => error.message)
-                        : [result.message || `Terjadi kesalahan (status ${response.status}).`];
-                    showToast('Gagal menambahkan proyek', errorMessages.join(' '), 'error');
+                    showToast('Gagal menambahkan proyek', getApiErrorMessage(result, response.status), 'error');
                 }
             } catch (error) {
                 console.error('Error adding project:', error);

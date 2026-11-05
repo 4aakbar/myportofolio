@@ -164,22 +164,22 @@ class ProjectTest(TestCase):
         self.assertEqual(str(self.project), "Veto")
         self.assertEqual(self.project.category, "ai")
 
-    def test_projects_json_shows_data(self):
-        fields = self.client.get(reverse("main:get_projects_json")).json()[0]["fields"]
+    def test_projects_page_uses_api(self):
+        response = self.client.get(reverse("main:show_projects"))
 
-        self.assertEqual(fields["title"], self.project.title)
-        self.assertEqual(fields["description"], self.project.description)
-        self.assertEqual(fields["category_display"], "AI/ML")
+        # Halaman hanya berisi kerangka; data proyek dimuat lewat API.
+        self.assertNotContains(response, self.project.title)
+        self.assertContains(response, reverse("main:project_list_api"))
 
-    def test_projects_json_with_link(self):
+    def test_projects_api_with_link(self):
         self.project.link = "https://github.com/4aakbar/veto"
         self.project.save()
-        fields = self.client.get(reverse("main:get_projects_json")).json()[0]["fields"]
+        project = self.client.get(reverse("main:project_list_api")).json()[0]
 
-        self.assertEqual(fields["link"], self.project.link)
+        self.assertEqual(project["link"], self.project.link)
 
-    def test_empty_projects_json(self):
+    def test_empty_projects_api(self):
         Project.objects.all().delete()
-        response = self.client.get(reverse("main:get_projects_json"))
+        response = self.client.get(reverse("main:project_list_api"))
 
         self.assertEqual(response.json(), [])

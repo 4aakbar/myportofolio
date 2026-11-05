@@ -1,4 +1,5 @@
 django~=5.0
+djangorestframework
 gunicorn
 whitenoise
 psycopg2-binary

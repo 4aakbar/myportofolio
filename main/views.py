@@ -80,7 +80,7 @@ def show_experience(request):
     return render(request, "experience.html", context)
 
 def show_projects(request):
-    # Daftar proyek dimuat lewat AJAX dari get_projects_json; view ini cukup mengirim kerangka halaman.
+    # Daftar proyek dimuat lewat AJAX dari project_list_api; view ini cukup mengirim kerangka halaman.
     title_query = request.GET.get("title", "").strip()
 
     context = {
@@ -94,35 +94,6 @@ def show_projects(request):
 
 ####################################################################
 #   projects crud
-
-def get_projects_json(request):
-    title_query = request.GET.get("title", "").strip()
-    projects = Project.objects.prefetch_related("starred_by").all()
-
-    if title_query:
-        projects = projects.filter(title__icontains=title_query)
-
-    data = []
-    for project in projects:
-        starred_users = project.starred_by.all()
-        is_starred = request.user in starred_users if request.user.is_authenticated else False
-
-        # Hanya jumlah star yang dikirim; username pemberi star sengaja tidak diekspos ke publik.
-        data.append({
-            "pk": str(project.id),
-            "fields": {
-                "title": project.title,
-                "description": project.description,
-                "category": project.category,
-                "category_display": project.get_category_display(),
-                "link": project.link,
-                "created_at": project.created_at.isoformat(),
-                "star_count": len(starred_users),
-                "is_starred": is_starred,
-            },
-        })
-
-    return JsonResponse(data, safe=False)
 
 @login_required(login_url="/login/")
 def create_project(request):
@@ -141,25 +112,6 @@ def create_project(request):
         "form": form,
     }
     return render(request, "projects_form.html", context)
-
-
-@require_POST
-def create_project_ajax(request):
-    if not can_create_or_delete(request.user):
-        return JsonResponse(
-            {"message": "Hanya pemilik portofolio yang dapat menambahkan proyek."},
-            status=403,
-        )
-
-    form = ProjectForm(request.POST)
-    if form.is_valid():
-        project = form.save()
-        return JsonResponse(
-            {"message": "Proyek berhasil ditambahkan.", "pk": str(project.id)},
-            status=201,
-        )
-
-    return JsonResponse({"errors": form.errors.get_json_data()}, status=400)
 
 
 @login_required(login_url="/login/")
@@ -181,33 +133,6 @@ def update_project(request, project_id):
         "project": project,
     }
     return render(request, "projects_form.html", context)
-
-@login_required(login_url="/login/")
-def delete_project(request, project_id):
-    if not can_create_or_delete(request.user):
-        raise PermissionDenied
-
-    project = get_object_or_404(Project, pk=project_id)
-
-    if request.method == "POST":
-        project.delete()
-        messages.success(request, "Project berhasil dihapus!")
-        return redirect("main:show_projects")
-
-    return redirect("main:show_projects")
-
-
-@login_required(login_url="/login/")
-def toggle_star(request, project_id):
-    project = get_object_or_404(Project, pk=project_id)
-
-    if request.method == "POST":
-        if request.user in project.starred_by.all():
-            project.starred_by.remove(request.user)
-        else:
-            project.starred_by.add(request.user)
-
-    return redirect("main:show_projects")
 
 ####################################################################
 
