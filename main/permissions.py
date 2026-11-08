@@ -19,8 +19,17 @@ def can_update(user):
     return user.is_authenticated and (user.is_superuser or is_editor(user))
 
 
-class ProjectPermission(BasePermission):
-    """Semua orang boleh membaca; aturan tulis mengikuti can_update dan can_create_or_delete."""
+class IsPortfolioOwnerOrReadOnly(BasePermission):
+    """Semua orang boleh membaca; hanya pemilik portofolio yang boleh mengubah data (dipakai Projects)."""
+
+    message = "Hanya pemilik portofolio yang dapat mengubah proyek."
+
+    def has_permission(self, request, view):
+        return request.method in SAFE_METHODS or can_create_or_delete(request.user)
+
+
+class IsPortfolioOwnerOrEditorOrReadOnly(BasePermission):
+    """Semua orang boleh membaca; Editor boleh PUT/PATCH; hanya pemilik yang boleh POST dan DELETE."""
 
     message = "Anda tidak memiliki izin untuk melakukan tindakan ini."
 

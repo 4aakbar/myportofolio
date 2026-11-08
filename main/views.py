@@ -80,7 +80,7 @@ def show_experience(request):
     return render(request, "experience.html", context)
 
 def show_projects(request):
-    # Daftar proyek dimuat lewat AJAX dari project_list_api; view ini cukup mengirim kerangka halaman.
+    # Daftar proyek dimuat lewat AJAX dari api:project-list; view ini cukup mengirim kerangka halaman.
     title_query = request.GET.get("title", "").strip()
 
     context = {
@@ -88,7 +88,8 @@ def show_projects(request):
         "title_query": title_query,
         "form": ProjectForm(),
         "can_create_or_delete": can_create_or_delete(request.user),
-        "can_update": can_update(request.user),
+        # Projects hanya dikelola pemilik, sama seperti IsPortfolioOwnerOrReadOnly di API.
+        "can_update": can_create_or_delete(request.user),
     }
     return render(request, "projects.html", context)
 
@@ -116,7 +117,7 @@ def create_project(request):
 
 @login_required(login_url="/login/")
 def update_project(request, project_id):
-    if not can_update(request.user):
+    if not can_create_or_delete(request.user):
         raise PermissionDenied
 
     project = get_object_or_404(Project, pk=project_id)

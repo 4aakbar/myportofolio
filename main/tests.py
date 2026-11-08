@@ -169,17 +169,17 @@ class ProjectTest(TestCase):
 
         # Halaman hanya berisi kerangka; data proyek dimuat lewat API.
         self.assertNotContains(response, self.project.title)
-        self.assertContains(response, reverse("main:project_list_api"))
+        self.assertContains(response, reverse("api:project-list"))
 
     def test_projects_api_with_link(self):
         self.project.link = "https://github.com/4aakbar/veto"
         self.project.save()
-        project = self.client.get(reverse("main:project_list_api")).json()[0]
+        project = self.client.get(reverse("api:project-list")).json()[0]
 
         self.assertEqual(project["link"], self.project.link)
 
     def test_empty_projects_api(self):
         Project.objects.all().delete()
-        response = self.client.get(reverse("main:project_list_api"))
+        response = self.client.get(reverse("api:project-list"))
 
         self.assertEqual(response.json(), [])

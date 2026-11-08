@@ -1,44 +1,69 @@
 from django.shortcuts import get_object_or_404
-from rest_framework import generics
+from rest_framework import status
+from rest_framework.authentication import SessionAuthentication
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.views import APIView
 
 from main.models import Project
-from main.permissions import ProjectPermission
+from main.permissions import IsPortfolioOwnerOrReadOnly
 from main.serializers import ProjectSerializer
 
 
-class ProjectListCreateAPIView(generics.ListCreateAPIView):
-    serializer_class = ProjectSerializer
-    permission_classes = [ProjectPermission]
+@api_view(["GET", "HEAD", "POST"])
+@authentication_classes([SessionAuthentication])
+@permission_classes([IsPortfolioOwnerOrReadOnly])
+def project_list(request):
+    if request.method in ("GET", "HEAD"):
+        projects = Project.objects.prefetch_related("starred_by").order_by("-created_at", "id")
+        title = request.query_params.get("title", "").strip()
+        if title:
+            projects = projects.filter(title__icontains=title)
+        serializer = ProjectSerializer(projects, many=True, context={"request": request})
+        return Response(serializer.data)
 
-    def get_queryset(self):
-        projects = Project.objects.prefetch_related("starred_by").order_by("-created_at")
-        title_query = self.request.query_params.get("title", "").strip()
-
-        if title_query:
-            projects = projects.filter(title__icontains=title_query)
-
-        return projects
-
-
-class ProjectDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Project.objects.prefetch_related("starred_by")
-    serializer_class = ProjectSerializer
-    permission_classes = [ProjectPermission]
+    serializer = ProjectSerializer(data=request.data, context={"request": request})
+    serializer.is_valid(raise_exception=True)
+    serializer.save()
+    return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
-class ProjectStarAPIView(APIView):
-    permission_classes = [IsAuthenticated]
+@api_view(["GET", "HEAD", "PUT", "PATCH", "DELETE"])
+@authentication_classes([SessionAuthentication])
+@permission_classes([IsPortfolioOwnerOrReadOnly])
+def project_detail(request, project_id):
+    project = get_object_or_404(Project.objects.prefetch_related("starred_by"), pk=project_id)
 
-    def post(self, request, pk):
-        project = get_object_or_404(Project, pk=pk)
+    if request.method in ("GET", "HEAD"):
+        serializer = ProjectSerializer(project, context={"request": request})
+        return Response(serializer.data)
 
-        is_starred = project.starred_by.filter(pk=request.user.pk).exists()
-        if is_starred:
-            project.starred_by.remove(request.user)
-        else:
-            project.starred_by.add(request.user)
+    if request.method == "DELETE":
+        project.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
-        return Response({"is_starred": not is_starred, "star_count": project.starred_by.count()})
+    serializer = ProjectSerializer(
+        project,
+        data=request.data,
+        partial=request.method == "PATCH",
+        context={"request": request},
+    )
+    serializer.is_valid(raise_exception=True)
+    serializer.save()
+    return Response(serializer.data)
+
+
+@api_view(["POST"])
+@authentication_classes([SessionAuthentication])
+@permission_classes([IsAuthenticated])
+def project_star(request, project_id):
+    project = get_object_or_404(Project, pk=project_id)
+
+    # Akun pemberi star selalu diambil dari session, bukan dari input klien.
+    if project.starred_by.filter(pk=request.user.pk).exists():
+        project.starred_by.remove(request.user)
+    else:
+        project.starred_by.add(request.user)
+
+    serializer = ProjectSerializer(project, context={"request": request})
+    return Response(serializer.data)

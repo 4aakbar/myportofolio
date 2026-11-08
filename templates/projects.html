@@ -54,7 +54,7 @@
     {% endif %}
 
     <script>
-        const BASE_PROJECTS_ENDPOINT = "{% url 'main:project_list_api' %}";
+        const BASE_PROJECTS_ENDPOINT = "{% url 'api:project-list' %}";
         const LOGIN_URL = "{% url 'main:login' %}";
         const IS_AUTHENTICATED = "{{ user.is_authenticated|yesno:'true,false' }}" === "true";
         const CAN_CREATE_OR_DELETE = "{{ can_create_or_delete|yesno:'true,false' }}" === "true";
@@ -62,8 +62,8 @@
         const CSRF_TOKEN = "{{ csrf_token }}";
         const PLACEHOLDER_ID = "00000000-0000-0000-0000-000000000000";
         const UPDATE_URL_TEMPLATE = "{% url 'main:update_project' '00000000-0000-0000-0000-000000000000' %}";
-        const DETAIL_URL_TEMPLATE = "{% url 'main:project_detail_api' '00000000-0000-0000-0000-000000000000' %}";
-        const STAR_URL_TEMPLATE = "{% url 'main:project_star_api' '00000000-0000-0000-0000-000000000000' %}";
+        const DETAIL_URL_TEMPLATE = "{% url 'api:project-detail' '00000000-0000-0000-0000-000000000000' %}";
+        const STAR_URL_TEMPLATE = "{% url 'api:project-star' '00000000-0000-0000-0000-000000000000' %}";
         const SEARCH_DEBOUNCE_DELAY = 300;
 
         let projectsAbortController;

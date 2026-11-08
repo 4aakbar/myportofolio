@@ -1,6 +1,5 @@
 from django.urls import path
 
-from main.api_views import ProjectDetailAPIView, ProjectListCreateAPIView, ProjectStarAPIView
 from main.views import (
     show_main,
     show_experience,
@@ -32,9 +31,6 @@ urlpatterns = [
     path("projects/", show_projects, name="show_projects"),
     path("projects/add/", create_project, name="create_project"),
     path("projects/<uuid:project_id>/edit/", update_project, name="update_project"),
-    path("api/projects/", ProjectListCreateAPIView.as_view(), name="project_list_api"),
-    path("api/projects/<uuid:pk>/", ProjectDetailAPIView.as_view(), name="project_detail_api"),
-    path("api/projects/<uuid:pk>/star/", ProjectStarAPIView.as_view(), name="project_star_api"),
     path("register/", register, name="register"),
     path("login/", login_user, name="login"),
     path("logout/", logout_user, name="logout"),
