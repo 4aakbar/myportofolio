@@ -1,0 +1,39 @@
+<div id="edit-experience-modal"
+     class="project-form-modal"
+     popover="auto"
+     role="dialog"
+     aria-modal="true"
+     aria-labelledby="edit-experience-modal-title">
+    <button type="button"
+            class="project-form-modal__backdrop"
+            popovertarget="edit-experience-modal"
+            popovertargetaction="hide"
+            aria-label="Tutup form edit pengalaman"></button>
+
+    <div class="project-form-modal__content">
+        <button type="button"
+                class="project-form-modal__close"
+                popovertarget="edit-experience-modal"
+                popovertargetaction="hide"
+                aria-label="Tutup form edit pengalaman">&times;</button>
+
+        <h2 id="edit-experience-modal-title">Edit Pengalaman</h2>
+        {# Form dikirim lewat fetch() sebagai PATCH ke API, bukan submit form biasa. #}
+        <form id="edit-experience-form" method="post" class="project-form">
+            {% csrf_token %}
+            {% for field in edit_form %}
+                <div class="form-group">
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                </div>
+            {% endfor %}
+            <div class="project-form-modal__actions">
+                <button type="button"
+                        class="button button-secondary"
+                        popovertarget="edit-experience-modal"
+                        popovertargetaction="hide">Batal</button>
+                <button type="submit" class="button">Simpan Perubahan</button>
+            </div>
+        </form>
+    </div>
+</div>

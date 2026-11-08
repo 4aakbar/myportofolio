@@ -53,6 +53,10 @@
         {% include "components/experience_form_modal.html" %}
     {% endif %}
 
+    {% if can_update %}
+        {% include "components/experience_edit_modal.html" %}
+    {% endif %}
+
     <script>
         const BASE_EXPERIENCE_ENDPOINT = "{% url 'api:experience-list' %}";
         const LOGIN_URL = "{% url 'main:login' %}";
@@ -62,7 +66,6 @@
         // Merender csrf_token juga memastikan cookie csrftoken terpasang untuk semua pengguna yang login.
         const CSRF_TOKEN = "{{ csrf_token }}";
         const PLACEHOLDER_ID = "00000000-0000-0000-0000-000000000000";
-        const UPDATE_URL_TEMPLATE = "{% url 'main:update_experience' '00000000-0000-0000-0000-000000000000' %}";
         const DETAIL_URL_TEMPLATE = "{% url 'api:experience-detail' '00000000-0000-0000-0000-000000000000' %}";
         const STAR_URL_TEMPLATE = "{% url 'api:experience-star' '00000000-0000-0000-0000-000000000000' %}";
         const SEARCH_DEBOUNCE_DELAY = 300;
@@ -77,6 +80,8 @@
 
         let experiencesAbortController;
         let searchDebounceTimer;
+        // Data hasil fetch terakhir, dipakai untuk mengisi modal edit tanpa request tambahan.
+        const experiencesById = new Map();
 
         const loadingState = document.getElementById('loading');
         const errorState = document.getElementById('error');
@@ -227,7 +232,7 @@
             articleElement.className = 'showcase-card';
 
             const updateHtml = CAN_UPDATE
-                ? `<a href="${experienceUrl(UPDATE_URL_TEMPLATE, escapeHtml(experience.id))}" class="button">Edit</a>`
+                ? `<button type="button" class="button" data-action="edit" data-id="${escapeHtml(experience.id)}">Edit</button>`
                 : '';
             const deleteHtml = CAN_CREATE_OR_DELETE ? buildDeleteHtml(experience) : '';
 
@@ -270,6 +275,8 @@
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
                 const experiences = await response.json();
+                experiencesById.clear();
+                experiences.forEach(experience => experiencesById.set(experience.id, experience));
 
                 if (experiences.length === 0) {
                     emptyMessage.textContent = searchQuery
@@ -323,6 +330,12 @@
         gridContainer.addEventListener('click', async function (event) {
             const button = event.target.closest('button[data-action]');
             if (!button || button.disabled) return;
+
+            // Edit hanya membuka modal; request PATCH dikirim saat form edit disubmit.
+            if (button.dataset.action === 'edit') {
+                openEditExperienceModal(button.dataset.id);
+                return;
+            }
 
             const isStar = button.dataset.action === 'star';
             button.disabled = true;
@@ -384,6 +397,61 @@
         // Modal dan form hanya dirender untuk pemilik portofolio; untuk peran lain elemennya null.
         if (experienceForm) {
             experienceForm.addEventListener('submit', addExperience);
+        }
+
+        const editExperienceForm = document.getElementById('edit-experience-form');
+        const editExperienceModal = document.getElementById('edit-experience-modal');
+        let editingExperienceId = null;
+
+        // API mengirim datetime ISO ("2026-01-01T00:00:00Z"); input type="date" butuh "YYYY-MM-DD".
+        function toDateInputValue(isoString) {
+            return isoString ? isoString.slice(0, 10) : '';
+        }
+
+        function openEditExperienceModal(experienceId) {
+            const experience = experiencesById.get(experienceId);
+            if (!experience || !editExperienceForm) return;
+
+            editingExperienceId = experienceId;
+            const fields = editExperienceForm.elements;
+            fields.title.value = experience.title;
+            fields.description.value = experience.description;
+            fields.category.value = experience.category;
+            fields.thumbnail.value = experience.thumbnail || '';
+            fields.started_at.value = toDateInputValue(experience.started_at);
+            fields.ended_at.value = toDateInputValue(experience.ended_at);
+            editExperienceModal.showPopover();
+        }
+
+        async function updateExperience(event) {
+            event.preventDefault();
+            if (!editingExperienceId) return;
+
+            const submitButton = editExperienceForm.querySelector('button[type="submit"]');
+            submitButton.disabled = true;
+
+            try {
+                // PATCH: hanya field di form yang dikirim; field lain (misalnya star) tidak tersentuh.
+                await sendApiRequest(
+                    experienceUrl(DETAIL_URL_TEMPLATE, editingExperienceId),
+                    'PATCH',
+                    buildExperiencePayload(editExperienceForm),
+                );
+                editExperienceModal.hidePopover();
+                editingExperienceId = null;
+                showToast('Berhasil', 'Pengalaman berhasil diperbarui!', 'success');
+                searchExperiences();
+            } catch (error) {
+                console.error('Error updating experience:', error);
+                showToast('Gagal memperbarui pengalaman', error.message, 'error', 5000);
+            } finally {
+                submitButton.disabled = false;
+            }
+        }
+
+        // Modal edit hanya dirender untuk Editor dan pemilik portofolio.
+        if (editExperienceForm) {
+            editExperienceForm.addEventListener('submit', updateExperience);
         }
 
         searchExperiences();

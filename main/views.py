@@ -74,6 +74,8 @@ def show_experience(request):
         "name": "Andy Aulia Akbar",
         "title_query": title_query,
         "form": ExperienceForm(),
+        # auto_id berbeda supaya id input modal edit tidak bentrok dengan modal tambah.
+        "edit_form": ExperienceForm(auto_id="edit_%s"),
         "can_create_or_delete": can_create_or_delete(request.user),
         "can_update": can_update(request.user),
     }
