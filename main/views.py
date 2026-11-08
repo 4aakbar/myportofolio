@@ -67,7 +67,7 @@ def logout_user(request):
 
 
 def show_experience(request):
-    # Daftar pengalaman dimuat lewat AJAX dari get_experience_json; view ini cukup mengirim kerangka halaman.
+    # Daftar pengalaman dimuat lewat AJAX dari api:experience-list; view ini cukup mengirim kerangka halaman.
     title_query = request.GET.get("title", "").strip()
 
     context = {
