@@ -1,9 +1,10 @@
-from django.contrib.auth.models import User
+from django.contrib.auth.models import Group, User
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
 from main.models import Experience, Project
+from main.permissions import EDITOR_GROUP_NAME
 
 
 class MainTest(TestCase):
@@ -48,98 +49,51 @@ class MainTest(TestCase):
         self.assertContains(response, reverse("api:experience-list"))
         self.assertContains(response, f'href="{reverse("main:show_main")}"')
 
-    def test_experience_json(self):
-        response = self.client.get(reverse("main:get_experience_json"))
-        data = response.json()
-
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(data), 1)
-        fields = data[0]["fields"]
-        self.assertEqual(fields["title"], self.experience.title)
-        self.assertEqual(fields["category_display"], "Volunteer")
-        self.assertTrue(fields["is_ongoing"])
-        self.assertEqual(fields["star_count"], 0)
-        self.assertFalse(fields["is_starred"])
-
-    def test_experience_json_search(self):
-        Experience.objects.create(title="Riset AI", description="Riset", category="research")
-
-        data = self.client.get(reverse("main:get_experience_json"), {"title": "riset"}).json()
-
-        self.assertEqual([item["fields"]["title"] for item in data], ["Riset AI"])
-
-    def test_empty_experience_json(self):
-        Experience.objects.all().delete()
-        response = self.client.get(reverse("main:get_experience_json"))
-
-        self.assertEqual(response.json(), [])
-
     def test_completed_experience(self):
         self.experience.ended_at = timezone.now()
         self.experience.save()
-        fields = self.client.get(reverse("main:get_experience_json")).json()[0]["fields"]
 
         self.assertFalse(self.experience.is_ongoing)
-        self.assertFalse(fields["is_ongoing"])
-        self.assertIsNotNone(fields["ended_at"])
 
 
-class ExperienceAjaxTest(TestCase):
+class ExperienceViewPermissionTest(TestCase):
+    """Halaman lama Tugas 3 harus mengikuti aturan peran yang sama dengan API experience."""
+
     def setUp(self):
-        self.url = reverse("main:create_experience_ajax")
-        self.valid_data = {
-            "title": "Magang Backend",
-            "description": "Membangun API",
-            "category": "internship",
-            "started_at": "2025-01-01",
-        }
+        self.experience = Experience.objects.create(
+            title="Riset", description="Riset", category="research",
+        )
         self.owner = User.objects.create_superuser("owner", password="rahasia-123")
+        self.editor = User.objects.create_user("editor", password="rahasia-123")
+        self.editor.groups.add(Group.objects.get_or_create(name=EDITOR_GROUP_NAME)[0])
         self.user = User.objects.create_user("pengunjung", password="rahasia-123")
+        self.create_url = reverse("main:create_experience")
+        self.update_url = reverse("main:update_experience", args=[self.experience.id])
+        self.delete_url = reverse("main:delete_experience", args=[self.experience.id])
 
-    def test_create_requires_owner(self):
-        self.assertEqual(self.client.post(self.url, self.valid_data).status_code, 403)
+    def test_regular_user_cannot_manage(self):
+        self.client.force_login(self.user)
 
-        self.client.login(username="pengunjung", password="rahasia-123")
-        self.assertEqual(self.client.post(self.url, self.valid_data).status_code, 403)
-        self.assertFalse(Experience.objects.exists())
+        self.assertEqual(self.client.get(self.create_url).status_code, 403)
+        self.assertEqual(self.client.get(self.update_url).status_code, 403)
+        self.assertEqual(self.client.post(self.delete_url).status_code, 403)
+        self.assertTrue(Experience.objects.filter(pk=self.experience.pk).exists())
 
-    def test_create_valid(self):
-        self.client.login(username="owner", password="rahasia-123")
-        response = self.client.post(self.url, self.valid_data)
+    def test_editor_can_update_but_not_create_or_delete(self):
+        self.client.force_login(self.editor)
 
-        self.assertEqual(response.status_code, 201)
-        self.assertTrue(Experience.objects.filter(pk=response.json()["pk"]).exists())
+        self.assertEqual(self.client.get(self.update_url).status_code, 200)
+        self.assertEqual(self.client.get(self.create_url).status_code, 403)
+        self.assertEqual(self.client.post(self.delete_url).status_code, 403)
+        self.assertTrue(Experience.objects.filter(pk=self.experience.pk).exists())
 
-    def test_create_invalid(self):
-        self.client.login(username="owner", password="rahasia-123")
-        response = self.client.post(self.url, {**self.valid_data, "title": ""})
+    def test_owner_can_delete(self):
+        self.client.force_login(self.owner)
 
-        self.assertEqual(response.status_code, 400)
-        self.assertIn("title", response.json()["errors"])
+        response = self.client.post(self.delete_url)
 
-    def test_create_strips_html_tags(self):
-        self.client.login(username="owner", password="rahasia-123")
-        xss = "<img src=\"x\" onerror=\"alert('XSS!')\">"
-
-        rejected = self.client.post(self.url, {**self.valid_data, "title": xss})
-        accepted = self.client.post(self.url, {**self.valid_data, "title": f"Magang {xss}<b>Keren</b>"})
-
-        self.assertEqual(rejected.status_code, 400)
-        self.assertEqual(accepted.status_code, 201)
-        self.assertEqual(Experience.objects.get(pk=accepted.json()["pk"]).title, "Magang Keren")
-
-    def test_toggle_star(self):
-        experience = Experience.objects.create(title="Riset", description="Riset", category="research")
-        star_url = reverse("main:toggle_star_experience", args=[experience.id])
-        self.client.login(username="pengunjung", password="rahasia-123")
-
-        self.client.post(star_url)
-        fields = self.client.get(reverse("main:get_experience_json")).json()[0]["fields"]
-        self.assertEqual(fields["star_count"], 1)
-        self.assertTrue(fields["is_starred"])
-
-        self.client.post(star_url)
-        self.assertEqual(experience.starred_by.count(), 0)
+        self.assertRedirects(response, reverse("main:show_experience"))
+        self.assertFalse(Experience.objects.filter(pk=self.experience.pk).exists())
 
 
 class ProjectTest(TestCase):
